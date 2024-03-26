@@ -17,12 +17,10 @@ int main(int argc, char *argv[]) {
     printf("PID: %d\n", getpid());
 
     // Create a socket
-    printf("Opening socket...\n");
-    int listen_socket;
-    listen_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_socket < 0) 
+    int listen_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_socket < 0) {
         error("ERROR opening socket");
-
+    }
 
     // Bind the socket to an address
     int port = 8080;
@@ -30,13 +28,15 @@ int main(int argc, char *argv[]) {
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
     listen_addr.sin_port = htons(port);
-    printf("Binding socket to port %d...\n", port);
-    bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr));
-
+    int bindres = bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr));
+    if (bindres < 0) {
+        printf("ERROR on binding with errno: %d\n", errno);
+        exit(1);
+    }
 
     // Listen
     listen(listen_socket, 5);
-    printf("Listening...\n");
+    printf("Listening on %d\n", port);
 
     // Accept
     struct sockaddr_in client_addr;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     // Read
     char buffer[256];
     memset(buffer,0,256);
-    int n = read(serving_socket, buffer, 255);
+    int n = read(serving_socket, &buffer, 255);
     if (n < 0) error("ERROR reading from socket");
 
     printf("Here is the message: %s\n",buffer);

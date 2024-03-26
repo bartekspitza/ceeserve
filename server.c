@@ -25,14 +25,13 @@ int main(int argc, char *argv[]) {
 
 
     // Bind the socket to an address
-    int portno = 8080;
-    struct sockaddr_in serv_addr;
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(portno);
-    printf("Binding socket to port %d...\n", portno);
-    bind(listen_socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    int port = 8080;
+    struct sockaddr_in listen_addr = {0};
+    listen_addr.sin_family = AF_INET;
+    listen_addr.sin_addr.s_addr = INADDR_ANY;
+    listen_addr.sin_port = htons(port);
+    printf("Binding socket to port %d...\n", port);
+    bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr));
 
 
     // Listen

@@ -39,7 +39,6 @@ Header2:value2\n";
 
     http_request_t req = {0};
     http_request_parse(request, &req);
-    printf("%d\n", (int) req.headers[0].key[0]);
     TEST_ASSERT_EQUAL_INT16(2, req.header_count);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("localhost:8080", req.headers[0].value, strlen("localhost:8080"));

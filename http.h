@@ -7,9 +7,9 @@ typedef struct {
 } http_header_t;
 
 typedef struct {
-    char *method;
-    char *path;
-    char *version;
+    char method[10];
+    char path[1024];
+    char version[10];
     http_header_t *headers;
     int header_count;
     char *body;

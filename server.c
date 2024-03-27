@@ -79,9 +79,10 @@ int main(int argc, char *argv[]) {
             int n = read(serving_socket, buffer, buffer_size - 1);
             if (n < 0) error("ERROR reading from socket");
 
-            http_request_t req = http_request_parse(buffer);
+            http_request_t req;
+            http_request_parse(buffer, &req);
 
-            printf("%s %s %s\n", req.method, req.path, req.protocol);
+            printf("%s %s %s\n", req.method, req.path, req.version);
             printf("\n\n%d headers\n", req.header_count);
 
             for (int i = 0; i < req.header_count; i++) {

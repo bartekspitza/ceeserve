@@ -5,69 +5,78 @@
 #include <stdbool.h>
 
 // Internal funcs
-void __parse_headers(const char* request, int *hcount, http_header_t* ar);
+void __parse_headers(const char* request, http_request_t* req);
 // Internal funcs
 
-http_request_t http_request_parse(const char *request) {
-    char method[16], path[256], protocol[16];
-
-    http_request_t req;
+/*
+Parses the request. Returns 0 if good, -1 if protocol failure
+*/
+int http_request_parse(const char *request, http_request_t *req) {
+    char method[16], path[256], version[16];
 
     // parse start line
-    sscanf(request, "%s %s %s", method, path, protocol);
-    req.method = method;
-    req.path = path;
-    req.protocol = protocol;
+    sscanf(request, "%s %s %s", method, path, version);
+    req->method = method;
+    req->path = path;
+    req->version = version;
+    if (*req->method == '\0' || *req->path == '\0' || *req->version == '\0') {
+        return -1;
+    }
 
-    http_header_t *headers = malloc(sizeof(http_header_t) * 1000);
-    __parse_headers(request, &req.header_count, headers);
-    req.headers = realloc(headers, sizeof(http_header_t)*req.header_count);
+    __parse_headers(request, req);
 
-    return req;
+    return 0;
 }
 
-void __parse_headers(const char* request, int *hcount, http_header_t* ar) {
-    int currline = 0;
-    int i = 0;
-    int lineoffset = 0;
-    char c;
-    char key[256];
-    char value[256];
-    bool readingKey = true;
-    bool firstColon = false;
+void __parse_headers(const char* request, http_request_t* req) {
+    http_header_t *ar = malloc(sizeof(http_header_t) * 1000);
+    memset(ar, 0, sizeof(http_header_t) * 1000);
 
+    int currline = 0;
+    int lastOffset = 0;
+    bool firstColon = false;
+    char *currPointer = NULL;
+
+    char c;
+    int i = 0;
     while ((c = request[i]) != '\0') {
         if (c == '\n') {
-            if (currline >= 1 && strlen(key) > 0 && strcmp("\r", key)) {
-                ar[currline-1].key = strdup(key);
-                ar[currline-1].value = strdup(value);
+
+            // Trim
+            if (currPointer != NULL) {
+
             }
 
-            memset(key, 0, sizeof(key));
-            memset(value, 0, sizeof(value));
-            i++;
             currline++;
-            lineoffset = i;
-            readingKey = true;
+            ar[currline-1].key = (char*) malloc(sizeof(char)*256);
+            ar[currline-1].value = (char*) malloc(sizeof(char)*256);
+            currPointer = ar[currline-1].key;
+            lastOffset = i+1;
             firstColon = false;
+            i++;
+            continue;
+        }
+
+        if (c == '\r' || currline == 0) {
+            i++;
             continue;
         }
 
         if (c == ':' && !firstColon) {
-            i++; // Always an extra space after the :, skip it
-            readingKey = !readingKey;
             firstColon = true;
+            currPointer = ar[currline-1].value;
+            i++;
+            if (request[i] == ' ') i++; // skip first whitespace if exists
+
+            lastOffset = i;
             continue;
         }
 
-        if (readingKey) {
-            key[i-lineoffset] = c;
-        } else {
-            value[i-(lineoffset+2+strlen(key))] = c;
-        }
+        currPointer[i-lastOffset] = c;
 
         i++;
     }
 
-    *hcount = currline-2;
+    req->header_count = currline-1;
+    req->headers = realloc(ar, sizeof(http_request_t)*req->header_count);
 }

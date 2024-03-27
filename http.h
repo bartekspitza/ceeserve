@@ -9,12 +9,12 @@ typedef struct {
 typedef struct {
     char *method;
     char *path;
-    char *protocol;
+    char *version;
     http_header_t *headers;
     int header_count;
     char *body;
 } http_request_t;
 
-http_request_t http_request_parse(const char *request);
+int http_request_parse(const char *request, http_request_t* req);
 
 #endif

@@ -15,6 +15,17 @@ typedef struct {
     char *body;
 } HttpRequest;
 
+typedef struct {
+    char version[10];
+    int status_code;
+    char status_desc[30];
+    HttpHeader *headers;
+    int header_count;
+    char *body;
+} HttpResponse;
+
 int http_request_parse(const char *request, HttpRequest* req);
+
+void resptostr(HttpResponse response, char* str);
 
 #endif

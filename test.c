@@ -73,14 +73,59 @@ Header2:value2\n\n";
     TEST_ASSERT_EQUAL_CHAR_ARRAY("value2", req.headers[1].value, strlen("value2"));
 }
 
+void http_response_tostr_response_line() {
+    HttpResponse resp = {
+        .version = "HTTP/1.1",
+        .status_code = 400,
+        .status_desc = "Bad Request",
+        .headers = NULL,
+        .header_count = 0,
+        .body = NULL,
+    };
+
+    char resptext[1024] = {0};
+    resptostr(resp, resptext);
+
+    char correct[] = "HTTP/1.1 400 Bad Request\r\n\r\n\0";
+    TEST_ASSERT_EQUAL_CHAR_ARRAY(correct, resptext, strlen(correct));
+}
+
+void http_response_tostr_headers() {
+    HttpHeader h1 = {
+        .key = "server",
+        .value = "ceeserve",
+    };
+    HttpHeader headers[] = {h1};
+    HttpResponse resp = {
+        .version = "HTTP/1.1",
+        .status_code = 400,
+        .status_desc = "Bad Request",
+        .headers = headers,
+        .header_count = 1,
+        .body = NULL,
+    };
+
+    char resptext[1024] = {0};
+    resptostr(resp, resptext);
+
+    char correct[] = "HTTP/1.1 400 Bad Request\r\nserver: ceeserve\r\n\r\n\0";
+    TEST_ASSERT_EQUAL_CHAR_ARRAY(correct, resptext, strlen(correct));
+}
+
+
 int main(int argc, char *argv[]) {
     UNITY_BEGIN();
+
     RUN_TEST(http_request_parse_http11_request_line_failure);
     RUN_TEST(http_request_parse_http11_request_line);
     RUN_TEST(http_request_parse_http11_headers_failure_no_trailing_newline);
     RUN_TEST(http_request_parse_http11_headers);
     RUN_TEST(http_request_parse_http11_headers_withcr);
     RUN_TEST(http_request_parse_http11_headers_multiple);
+
+    RUN_TEST(http_response_tostr_response_line);
+    RUN_TEST(http_response_tostr_headers);
+
     UNITY_END();
     return 0;
 }

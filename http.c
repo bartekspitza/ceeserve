@@ -9,6 +9,20 @@ int __parse_headers(const char* request, HttpRequest* req);
 int __request_line(const char* request, HttpRequest* req, char* cursor);
 // Internal funcs
 
+void resptostr(HttpResponse resp, char *str) {
+    char * orig = str;
+    sprintf(str, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
+    str += strlen(str);
+
+    for (int i = 0; i < resp.header_count; i++) {
+        HttpHeader hdr = resp.headers[i];
+        sprintf(str, "%s: %s\r\n", hdr.key, hdr.value);
+        str += strlen(str);
+    }
+
+    strcpy(str, "\r\n\0");
+}
+
 /*
 Parses the request. Returns 0 if good, -1 if protocol failure
 */

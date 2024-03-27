@@ -80,13 +80,21 @@ int main(int argc, char *argv[]) {
             if (n < 0) error("ERROR reading from socket");
 
             HttpRequest req;
-            http_request_parse(buffer, &req);
+            int res = http_request_parse(buffer, &req);
+            if (res == -1) {
+                puts("malformed");
+                HttpResponse resp = {
+                    .version = "HTTP/1.1",
+                    .status_code = 400,
+                    .status_desc = "Bad Request",
+                    .headers = NULL,
+                    .header_count = 0,
+                    .body = NULL,
+                };
 
-            printf("%s %s %s\n", req.method, req.path, req.version);
-            printf("\n\n%d headers\n", req.header_count);
-
-            for (int i = 0; i < req.header_count; i++) {
-                printf("%s: %s\n", req.headers[i].key, req.headers[i].value);
+                char resptext[1024] = {0};
+                resptostr(resp, resptext);
+                send(serving_socket, resptext, 1024, 0);
             }
 
 

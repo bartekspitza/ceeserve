@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
+#include "http.h"
 
 void error(const char *msg) {
     perror(msg);
@@ -78,8 +79,14 @@ int main(int argc, char *argv[]) {
             int n = read(serving_socket, buffer, buffer_size - 1);
             if (n < 0) error("ERROR reading from socket");
 
-            //puts(buffer);
-            printf("%s", buffer);
+            http_request_t req = http_request_parse(buffer);
+
+            printf("%s %s %s\n", req.method, req.path, req.protocol);
+            printf("\n\n%d headers\n", req.header_count);
+
+            for (int i = 0; i < req.header_count; i++) {
+                printf("%s: %s\n", req.headers[i].key, req.headers[i].value);
+            }
 
 
             close(serving_socket);

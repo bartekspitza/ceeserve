@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
             int n = read(serving_socket, buffer, buffer_size - 1);
             if (n < 0) error("ERROR reading from socket");
 
-            http_request_t req;
+            HttpRequest req;
             http_request_parse(buffer, &req);
 
             printf("%s %s %s\n", req.method, req.path, req.version);

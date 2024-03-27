@@ -5,14 +5,14 @@
 #include <stdbool.h>
 
 // Internal funcs
-int __parse_headers(const char* request, http_request_t* req);
-int __request_line(const char* request, http_request_t* req, char* cursor);
+int __parse_headers(const char* request, HttpRequest* req);
+int __request_line(const char* request, HttpRequest* req, char* cursor);
 // Internal funcs
 
 /*
 Parses the request. Returns 0 if good, -1 if protocol failure
 */
-int http_request_parse(const char *request, http_request_t *req) {
+int http_request_parse(const char *request, HttpRequest *req) {
     char *startpos = (char*) request;
 
     if (__request_line(request, req, startpos) == -1) {
@@ -26,7 +26,7 @@ int http_request_parse(const char *request, http_request_t *req) {
     return 0;
 }
 
-int __request_line(const char* request, http_request_t* req, char* cursor) {
+int __request_line(const char* request, HttpRequest* req, char* cursor) {
     int i = 0;
     char c;
     int part = 0;
@@ -57,9 +57,9 @@ int __request_line(const char* request, http_request_t* req, char* cursor) {
     return part == 2 ? 0 : -1;
 }
 
-int __parse_headers(const char* request, http_request_t* req) {
-    http_header_t *ar = malloc(sizeof(http_header_t) * 1000);
-    memset(ar, 0, sizeof(http_header_t) * 1000);
+int __parse_headers(const char* request, HttpRequest* req) {
+    HttpHeader *ar = malloc(sizeof(HttpHeader) * 1000);
+    memset(ar, 0, sizeof(HttpHeader) * 1000);
 
     int currline = 0;
     int lastOffset = 0;
@@ -110,7 +110,7 @@ int __parse_headers(const char* request, http_request_t* req) {
     if (!encounteredblank) return -1;
 
     req->header_count = currline-1;
-    req->headers = realloc(ar, sizeof(http_request_t)*req->header_count);
+    req->headers = realloc(ar, sizeof(HttpRequest)*req->header_count);
 
     return 0;
 }

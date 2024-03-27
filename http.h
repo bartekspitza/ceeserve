@@ -4,17 +4,17 @@
 typedef struct {
     char *key;
     char *value;
-} http_header_t;
+} HttpHeader;
 
 typedef struct {
     char method[10];
     char path[1024];
     char version[10];
-    http_header_t *headers;
+    HttpHeader *headers;
     int header_count;
     char *body;
-} http_request_t;
+} HttpRequest;
 
-int http_request_parse(const char *request, http_request_t* req);
+int http_request_parse(const char *request, HttpRequest* req);
 
 #endif

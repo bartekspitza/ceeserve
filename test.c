@@ -8,7 +8,7 @@
 void http_request_parse_http11_request_line_failure() {
     char *request = "GET /";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     int res = http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_INT16(-1, res);
 }
@@ -17,7 +17,7 @@ void http_request_parse_http11_request_line() {
     char *request = "GET / HTTP/1.1\n\
     Host: localhost:8080\r\n";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("GET", req.method, 3);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("HTTP/1.1", req.version, 8);
@@ -29,7 +29,7 @@ void http_request_parse_http11_headers_failure_no_trailing_newline() {
 GET / HTTP/1.1\n\
 Host: localhost:8080\r\n";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     int res = http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_INT16(-1, res);
 }
@@ -39,7 +39,7 @@ void http_request_parse_http11_headers() {
 GET / HTTP/1.1\n\
 Host: localhost:8080\n\n";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_INT16(1, req.header_count);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);
@@ -51,7 +51,7 @@ void http_request_parse_http11_headers_withcr() {
 GET / HTTP/1.1\n\
 Host: localhost:8080\r\n\n";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_INT16(1, req.header_count);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);
@@ -64,7 +64,7 @@ GET / HTTP/1.1\n\
 Host: localhost:8080\r\n\
 Header2:value2\n\n";
 
-    http_request_t req = {0};
+    HttpRequest req = {0};
     http_request_parse(request, &req);
     TEST_ASSERT_EQUAL_INT16(2, req.header_count);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);

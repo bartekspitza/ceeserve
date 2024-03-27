@@ -65,25 +65,26 @@ int __parse_headers(const char* request, http_request_t* req) {
     int lastOffset = 0;
     bool firstColon = false;
     char *currPointer = NULL;
+    bool encounteredblank = false;
 
     char c;
     int i = 0;
     while ((c = request[i]) != '\0') {
         if (c == '\n') {
-
-            // Trim
-            if (currPointer != NULL) {
-
-            }
-
             currline++;
-            ar[currline-1].key = (char*) malloc(sizeof(char)*256);
-            ar[currline-1].value = (char*) malloc(sizeof(char)*256);
-            currPointer = ar[currline-1].key;
-            lastOffset = i+1;
-            firstColon = false;
             i++;
-            continue;
+
+            if (request[i] == '\n') { // blank line, headers end
+                encounteredblank = true;
+                break; 
+            } else {
+                ar[currline-1].key = (char*) malloc(sizeof(char)*256);
+                ar[currline-1].value = (char*) malloc(sizeof(char)*256);
+                currPointer = ar[currline-1].key;
+                lastOffset = i;
+                firstColon = false;
+                continue;
+            }
         }
 
         if (c == '\r' || currline == 0) {
@@ -105,6 +106,8 @@ int __parse_headers(const char* request, http_request_t* req) {
 
         i++;
     }
+    
+    if (!encounteredblank) return -1;
 
     req->header_count = currline-1;
     req->headers = realloc(ar, sizeof(http_request_t)*req->header_count);

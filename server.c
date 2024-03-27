@@ -40,28 +40,36 @@ int main(int argc, char *argv[]) {
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
     listen_addr.sin_port = htons(port);
-    if (bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr)) < 0) {
-        error("ERROR on binding");
-    }
-
-    // Listen
-    listen(listen_socket, 5);
     printf("Listening on %d\n", port);
+    if (bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr)) < 0) {
+        error(NULL);
+    }
+    listen(listen_socket, 5);
 
+    // Register signal handler for SIGCHLD to clean up zombie processes
+    struct sigaction act = {0};
+    act.sa_handler = sigchld_handler;
+    act.sa_flags = SA_RESTART;
+    sigaction(SIGCHLD, &act, NULL);
 
+    // Accept connections
     while(1) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
 
         int serving_socket = accept(listen_socket, (struct sockaddr*) &client_addr, &client_len);
         if (serving_socket < 0) {
-            perror("accept");
+            error("accept");
             continue;
         }
 
-        int pid = fork();
-        if (pid == 0) { // This is the child process
-            //close(listen_socket); // Child doesn't need the listener
+        int cpid = fork();
+        if (cpid == -1) {
+            error("fork");
+            exit(1);
+        } else if (cpid == 0) { // Child
+            // Let child handle the connection
+            close(listen_socket);
             printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 
             char buffer[256];
@@ -72,11 +80,8 @@ int main(int argc, char *argv[]) {
             printf("Here is the message: %s\n", buffer);
             close(serving_socket);
             exit(0);
-        } else if (pid < 0) {
-            perror("fork");
-            exit(1);
-        } else {
-            close(serving_socket);  // Parent doesn't need this
+        } else { // Parent
+            close(serving_socket);
         }
     }
 

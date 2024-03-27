@@ -72,12 +72,16 @@ int main(int argc, char *argv[]) {
             close(listen_socket);
             printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 
-            char buffer[256];
-            memset(buffer,0,256);
-            int n = read(serving_socket, buffer, 255);
+            size_t buffer_size = 2048;
+            char buffer[buffer_size];
+            memset(buffer, 0, buffer_size);
+            int n = read(serving_socket, buffer, buffer_size - 1);
             if (n < 0) error("ERROR reading from socket");
 
-            printf("Here is the message: %s\n", buffer);
+            //puts(buffer);
+            printf("%s", buffer);
+
+
             close(serving_socket);
             exit(0);
         } else { // Parent

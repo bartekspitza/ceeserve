@@ -5,16 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
-void http_request_parse_http11_supported() {
-    char *request = "GET / HTTP/1.1\n\
-    Host: localhost:8080\r\n";
-
-    http_request_t req = {0};
-    http_request_parse(request, &req);
-}
-
-void http_request_parse_http11_protocol_failure() {
+void http_request_parse_http11_request_line_failure() {
     char *request = "GET /";
 
     http_request_t req = {0};
@@ -32,10 +23,46 @@ void http_request_parse_http11_request_line() {
     TEST_ASSERT_EQUAL_CHAR_ARRAY("HTTP/1.1", req.version, 8);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("/", req.path, 1);
 }
+
+void http_request_parse_http11_headers_failure_no_trailing_newline() {
+    char request[] = "\
+GET / HTTP/1.1\n\
+Host: localhost:8080\r\n";
+
+    http_request_t req = {0};
+    int res = http_request_parse(request, &req);
+    TEST_ASSERT_EQUAL_INT16(-1, res);
+}
+
 void http_request_parse_http11_headers() {
-    char request[] = "GET / HTTP/1.1\n\
+    char request[] = "\
+GET / HTTP/1.1\n\
+Host: localhost:8080\n\n";
+
+    http_request_t req = {0};
+    http_request_parse(request, &req);
+    TEST_ASSERT_EQUAL_INT16(1, req.header_count);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("localhost:8080", req.headers[0].value, strlen("localhost:8080"));
+}
+
+void http_request_parse_http11_headers_withcr() {
+    char request[] = "\
+GET / HTTP/1.1\n\
+Host: localhost:8080\r\n\n";
+
+    http_request_t req = {0};
+    http_request_parse(request, &req);
+    TEST_ASSERT_EQUAL_INT16(1, req.header_count);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("Host", req.headers[0].key, 4);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("localhost:8080", req.headers[0].value, strlen("localhost:8080"));
+}
+
+void http_request_parse_http11_headers_multiple() {
+    char request[] = "\
+GET / HTTP/1.1\n\
 Host: localhost:8080\r\n\
-Header2:value2\n";
+Header2:value2\n\n";
 
     http_request_t req = {0};
     http_request_parse(request, &req);
@@ -47,18 +74,14 @@ Header2:value2\n";
 }
 
 int main(int argc, char *argv[]) {
-
-
     UNITY_BEGIN();
-
-    RUN_TEST(http_request_parse_http11_supported);
-    RUN_TEST(http_request_parse_http11_protocol_failure);
+    RUN_TEST(http_request_parse_http11_request_line_failure);
     RUN_TEST(http_request_parse_http11_request_line);
+    RUN_TEST(http_request_parse_http11_headers_failure_no_trailing_newline);
     RUN_TEST(http_request_parse_http11_headers);
-
+    RUN_TEST(http_request_parse_http11_headers_withcr);
+    RUN_TEST(http_request_parse_http11_headers_multiple);
     UNITY_END();
-
-
     return 0;
 }
 

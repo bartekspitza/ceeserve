@@ -9,22 +9,35 @@ int __parse_headers(const char* request, HttpRequest* req);
 int __request_line(const char* request, HttpRequest* req, char* cursor);
 // Internal funcs
 
-void resptostr(HttpResponse resp, char *str) {
-    sprintf(str, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
-    str += strlen(str);
+char* resptostr(HttpResponse resp, long *bytes) {
+    char tmp[256];
+    char *ptmp = tmp;
+
+    sprintf(ptmp, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
+    ptmp += strlen(ptmp);
 
     for (int i = 0; i < resp.header_count; i++) {
         HttpHeader hdr = resp.headers[i];
-        sprintf(str, "%s: %s\r\n", hdr.key, hdr.value);
-        str += strlen(str);
+        sprintf(ptmp, "%s: %s\r\n", hdr.key, hdr.value);
+        ptmp += strlen(ptmp);
     }
 
-    strcpy(str, "\r\n");
-    str += strlen(str);
+    strcpy(ptmp, "\r\n");
+    ptmp += strlen(ptmp);
+    long datalength = strlen(tmp) + resp.body_length;
 
-    if (resp.body != NULL) {
-        strcpy(str, resp.body);
+    if (bytes != NULL) {
+        *bytes = datalength;
     }
+
+    char *respdata = malloc(datalength);
+    memcpy(respdata, tmp, strlen(tmp));
+
+    if (resp.body != NULL && resp.body_length > 0) {
+        memcpy((respdata+strlen(tmp)), resp.body, resp.body_length);
+    }
+
+    return respdata;
 }
 
 /*

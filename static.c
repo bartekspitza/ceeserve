@@ -16,9 +16,11 @@ void __log(const char* msg) {
     logger("staticserver", msg);
 }
 
-char* read_file_into_mem(const char* filename);
+char* send_file(const char* filename);
 void log_request(struct sockaddr_in client, const HttpRequest *req, const HttpResponse *response);
-HttpResponse create_response(int status, char* statusdesc, char *body);
+void create_file_response(const char* filename, HttpResponse* response);
+HttpResponse create_response(int status, char *statusdesc, char *body);
+void add_header(HttpResponse *response, char* key, char* value);
 
 void handle_conn(int socket, struct sockaddr_in client_addr) {
     size_t buffer_size = 2048;
@@ -46,18 +48,14 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
             fname = path;
         }
 
-        char *fcontent = read_file_into_mem(fname);
-        if (fcontent == NULL) {
-            resp = create_response(404, "Not Found", NULL);
-        } else {
-            resp = create_response(200, "OK", fcontent);
-        }
+        create_file_response(fname, &resp);
     }
 
     log_request(client_addr, &req, &resp);
-    char resptext[5000];
-    resptostr(resp, resptext);
-    send(socket, resptext, strlen(resptext),0); 
+    long bytes; 
+    char *respdata = resptostr(resp, &bytes);
+
+    send(socket, respdata, bytes, 0); 
     close(socket);
 }
 
@@ -73,10 +71,16 @@ HttpResponse create_response(int status, char *statusdesc, char *body) {
     return resp;
 }
 
-char* read_file_into_mem(const char* filename) {
+void create_file_response(const char* filename, HttpResponse* response) {
+    response->version = "HTTP/1.1";
+    response->headers = malloc(sizeof(HttpHeader) * 100);
+    response->header_count = 0;
+
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
-        return NULL;
+        response->status_code = 404;
+        response->status_desc = "Not Found";
+        return;
     }
 
     // Find size
@@ -84,18 +88,38 @@ char* read_file_into_mem(const char* filename) {
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* buffer = malloc(fileSize + 1);
+    // Content-Length
+    char* clength = malloc(sizeof(char)*30);
+    sprintf(clength, "%ld", fileSize);
+    add_header(response, "Content-Length", clength);
 
     // Read the file into the buffer
-    size_t bytesRead = fread(buffer, 1, fileSize, file);
+    char* fcontent = malloc(fileSize);
+    size_t bytesRead = fread(fcontent, 1, fileSize, file);
+    fclose(file);
     if (bytesRead < fileSize) {
-        fclose(file);
-        error("Failed to read the file entirely");
+        response->status_code = 500;
+        response->status_desc = "Internal Server Error";
+        return;
     }
 
-    buffer[bytesRead] = '\0';
-    fclose(file);
-    return buffer;
+    if (strcmp(filename, "image.png") == 0) {
+        add_header(response, "Content-Type", "image/png");
+    }
+
+    response->body_length = fileSize;
+    response->body = fcontent;
+    response->status_code = 200;
+    response->status_desc = "OK";
+}
+
+/*
+This assumes there is memory allocated for the headers array
+*/
+void add_header(HttpResponse *response, char* key, char* value) {
+    response->headers[response->header_count].key = key;
+    response->headers[response->header_count].value = value;
+    response->header_count++;
 }
 
 void log_request(struct sockaddr_in client_addr, const HttpRequest *req, const HttpResponse *response) {

@@ -19,6 +19,7 @@ typedef struct {
     char *version;
     char *status_desc;
     char *body;
+    long body_length;
     int status_code;
     HttpHeader *headers;
     int header_count;
@@ -26,6 +27,6 @@ typedef struct {
 
 int http_request_parse(const char *request, HttpRequest* req);
 
-void resptostr(HttpResponse response, char* str);
+char* resptostr(HttpResponse resp, long *bytes);
 
 #endif

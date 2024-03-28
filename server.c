@@ -83,7 +83,6 @@ int main(int argc, char *argv[]) {
             HttpRequest req;
             int res = http_request_parse(buffer, &req);
             if (res == -1) {
-                puts("malformed");
                 HttpResponse resp = {
                     .version = "HTTP/1.1",
                     .status_code = 400,
@@ -95,7 +94,28 @@ int main(int argc, char *argv[]) {
 
                 char resptext[1024] = {0};
                 resptostr(resp, resptext);
-                send(serving_socket, resptext, 1024, 0);
+                send(serving_socket, resptext, strlen(resptext), 0);
+            } else {
+                HttpResponse resp = {
+                    .version = "HTTP/1.1",
+                    .status_code = 200,
+                    .status_desc = "OK",
+                    .headers = NULL,
+                    .header_count = 0,
+                    .body = NULL,
+                };
+                HttpHeader h1 = {
+                    .key = "Host",
+                    .value = "localhost:8080",
+                };
+                HttpHeader ar[] = {h1};
+                resp.header_count = 1;
+                resp.headers = ar;
+
+                char resptext[1024] = {0};
+                resptostr(resp, resptext);
+                puts(resptext);
+                send(serving_socket, resptext, strlen(resptext), 0);
             }
 
 

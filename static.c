@@ -16,7 +16,8 @@ void __log(const char* msg) {
     logger("staticserver", msg);
 }
 
-void handle_malformed(int socket, char* request);
+void send_response(int socket, int status, char* statusdesc);
+char* readFileIntoMemory(const char* filename, size_t* length);
 
 void handle_conn(int socket, struct sockaddr_in client_addr) {
     size_t buffer_size = 2048;
@@ -30,49 +31,89 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
 
     HttpRequest req;
     int res = http_request_parse(requestraw, &req);
-    if (http_request_parse(requestraw, &req) == -1) {
+    if (res == -1) {
         sprintf(logmsg, "%s MALFORMED", client);
-        handle_malformed(socket, requestraw);
-    } else {
+        send_response(socket, 400, "Bad Request");
+    } else if (strcmp(req.method, "GET") != 0) {
+        puts("zxcv");
+        puts(req.method);
+        puts("zxcv");
         sprintf(logmsg, "%s %s %s %s", client, req.method, req.path, req.version);
-        HttpResponse resp = {
-            .version = "HTTP/1.1",
-            .status_code = 200,
-            .status_desc = "OK",
-            .headers = NULL,
-            .header_count = 0,
-            .body = "Hello World!",
-        };
-        HttpHeader h1 = {
-            .key = "Host",
-            .value = "localhost:8080",
-        };
-        HttpHeader ar[] = {h1};
-        resp.header_count = 1;
-        resp.headers = ar;
+        send_response(socket, 400, "Bad Request");
+    } else {
+        puts("here");
+        sprintf(logmsg, "%s %s %s %s", client, req.method, req.path, req.version);
+        char *fname;
+        char *path = req.path;
+        path++; // Skip first /
 
-        char resptext[1024];
-        resptostr(resp, resptext);
-        send(socket, resptext, strlen(resptext), 0);
+        if (strlen(path) == 0) {
+            fname = "index.html";
+        } else {
+            fname = path;
+        }
+
+        char *fcontent = readFileIntoMemory(fname, NULL);
+        if (fcontent == NULL) {
+            send_response(socket, 404, "Not Found");
+        } else {
+            HttpResponse resp = {
+                .version = "HTTP/1.1",
+                .status_code = 200,
+                .status_desc = "OK",
+                .headers = NULL,
+                .header_count = 0,
+                .body = fcontent,
+            };
+
+            char resptext[sizeof(resp)*2];
+            resptostr(resp, resptext);
+            send(socket, resptext, strlen(resptext),0); 
+        }
     }
 
     __log(logmsg);
     close(socket);
 }
 
-void handle_malformed(int socket, char* request) {
-        HttpResponse resp = {
-            .version = "HTTP/1.1",
-            .status_code = 400,
-            .status_desc = "Bad Request",
-            .headers = NULL,
-            .header_count = 0,
-            .body = NULL,
-        };
+void send_response(int socket, int status, char *statusdesc) {
+    HttpResponse resp = {
+        .version = "HTTP/1.1",
+        .status_code = status,
+        .status_desc = statusdesc,
+        .header_count = 0,
+        .headers = NULL,
+        .body = NULL,
+    };
 
-        char resptext[1024];
-        resptostr(resp, resptext);
-        send(socket, resptext, strlen(resptext), 0);
+    char resptext[sizeof(resp)*2];
+    resptostr(resp, resptext);
+    send(socket, resptext, strlen(resptext), 0);
+}
+
+char* readFileIntoMemory(const char* filename, size_t* length) {
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) {
+        return NULL;
+    }
+
+    // Find size
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char* buffer = malloc(fileSize + 1);
+
+    // Read the file into the buffer
+    size_t bytesRead = fread(buffer, 1, fileSize, file);
+    if (bytesRead < fileSize) {
+        fclose(file);
+        error("Failed to read the file entirely");
+    }
+
+    buffer[bytesRead] = '\0';
+    fclose(file);
+    return buffer;
 }
 
 void error(const char *msg) {

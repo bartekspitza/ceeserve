@@ -7,21 +7,21 @@ typedef struct {
 } HttpHeader;
 
 typedef struct {
-    char method[10];
-    char path[1024];
-    char version[10];
+    char *method;
+    char *path;
+    char *version;
     HttpHeader *headers;
     int header_count;
     char *body;
 } HttpRequest;
 
 typedef struct {
-    char version[10];
+    char *version;
+    char *status_desc;
+    char *body;
     int status_code;
-    char status_desc[30];
     HttpHeader *headers;
     int header_count;
-    char *body;
 } HttpResponse;
 
 int http_request_parse(const char *request, HttpRequest* req);

@@ -14,8 +14,8 @@ void http_request_parse_http11_request_line_failure() {
 }
 
 void http_request_parse_http11_request_line() {
-    char *request = "GET / HTTP/1.1\n\
-    Host: localhost:8080\r\n";
+    char *request = "GET / HTTP/1.1\r\n\
+    Host: localhost:8080\r\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);
@@ -26,8 +26,8 @@ void http_request_parse_http11_request_line() {
 
 void http_request_parse_http11_headers_failure_no_trailing_newline() {
     char request[] = "\
-GET / HTTP/1.1\n\
-Host: localhost:8080\r\n";
+GET / HTTP/1.1\r\n\
+Host: localhost:8080";
 
     HttpRequest req = {0};
     int res = http_request_parse(request, &req);
@@ -36,8 +36,8 @@ Host: localhost:8080\r\n";
 
 void http_request_parse_http11_headers() {
     char request[] = "\
-GET / HTTP/1.1\n\
-Host: localhost:8080\n\r\n";
+GET / HTTP/1.1\r\n\
+Host: localhost:8080\r\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);
@@ -48,7 +48,7 @@ Host: localhost:8080\n\r\n";
 
 void http_request_parse_http11_headers_withcr() {
     char request[] = "\
-GET / HTTP/1.1\n\
+GET / HTTP/1.1\r\n\
 Host: localhost:8080\r\n\r\n";
 
     HttpRequest req = {0};
@@ -60,9 +60,9 @@ Host: localhost:8080\r\n\r\n";
 
 void http_request_parse_http11_headers_multiple() {
     char request[] = "\
-GET / HTTP/1.1\n\
+GET / HTTP/1.1\r\n\
 Host: localhost:8080\r\n\
-Header2:value2\n\r\n";
+Header2:value2\r\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);
@@ -138,8 +138,8 @@ void http_response_tostr_body() {
 int main(int argc, char *argv[]) {
     UNITY_BEGIN();
 
-    RUN_TEST(http_request_parse_http11_request_line_failure);
     RUN_TEST(http_request_parse_http11_request_line);
+    RUN_TEST(http_request_parse_http11_request_line_failure);
     RUN_TEST(http_request_parse_http11_headers_failure_no_trailing_newline);
     RUN_TEST(http_request_parse_http11_headers);
     RUN_TEST(http_request_parse_http11_headers_withcr);

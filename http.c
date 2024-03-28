@@ -45,34 +45,20 @@ int http_request_parse(const char *request, HttpRequest *req) {
 }
 
 int __request_line(const char* request, HttpRequest* req, char* cursor) {
-    int i = 0;
-    char c;
-    int part = 0;
-    int partidx = 0;
-    while ((c = request[i++]) != '\0') {
-        if (c == ' ') {
-            part++; 
-            partidx = 0;
-            continue;
-        } else if (c == '\r') {
-            continue;
-        } else if (c == '\n') {
-            cursor += i+1;
-            break;
-        }
 
-        if (part == 0) {
-            req->method[partidx] = c;
-        } else if (part == 1) {
-            req->path[partidx] = c;
-        } else if (part == 2) {
-            req->version[partidx] = c;
-        }
+    char method[50];
+    char path[2048];
+    char version[50];
+    int res = sscanf(request, "%49s %2047s %49s", method, path, version);
 
-        partidx++;
+    if (res != 3 || strlen(method) == 0 || strlen(path) == 0 || strlen(version) == 0) {
+        return -1;
     }
 
-    return part == 2 ? 0 : -1;
+    req->method = strdup(method);
+    req->path = strdup(path);
+    req->version = strdup(version);
+    return 0;
 }
 
 int __parse_headers(const char* request, HttpRequest* req) {

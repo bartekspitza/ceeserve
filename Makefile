@@ -6,5 +6,5 @@ all: server.c
 
 test: test.c
 	@gcc $(CFLAGS) test.c -o test http.c -L./unity -lunity
-	@# ./test
-	@# rm test
+	@./test
+	@rm test

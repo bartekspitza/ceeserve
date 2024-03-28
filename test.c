@@ -37,7 +37,7 @@ Host: localhost:8080\r\n";
 void http_request_parse_http11_headers() {
     char request[] = "\
 GET / HTTP/1.1\n\
-Host: localhost:8080\n\n";
+Host: localhost:8080\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);
@@ -49,7 +49,7 @@ Host: localhost:8080\n\n";
 void http_request_parse_http11_headers_withcr() {
     char request[] = "\
 GET / HTTP/1.1\n\
-Host: localhost:8080\r\n\n";
+Host: localhost:8080\r\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);
@@ -62,7 +62,7 @@ void http_request_parse_http11_headers_multiple() {
     char request[] = "\
 GET / HTTP/1.1\n\
 Host: localhost:8080\r\n\
-Header2:value2\n\n";
+Header2:value2\n\r\n";
 
     HttpRequest req = {0};
     http_request_parse(request, &req);

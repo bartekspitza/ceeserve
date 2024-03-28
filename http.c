@@ -10,7 +10,6 @@ int __request_line(const char* request, HttpRequest* req, char* cursor);
 // Internal funcs
 
 void resptostr(HttpResponse resp, char *str) {
-    char * orig = str;
     sprintf(str, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
     str += strlen(str);
 
@@ -88,7 +87,7 @@ int __parse_headers(const char* request, HttpRequest* req) {
             currline++;
             i++;
 
-            if (request[i] == '\n') { // blank line, headers end
+            if (request[i] == '\r' && request[i+1] == '\n') { // blank line, headers end
                 encounteredblank = true;
                 break; 
             } else {

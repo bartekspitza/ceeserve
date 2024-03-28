@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
             char buffer[buffer_size];
             memset(buffer, 0, buffer_size);
             int n = read(serving_socket, buffer, buffer_size - 1);
+            puts(buffer);
             if (n < 0) error("ERROR reading from socket");
 
             HttpRequest req;

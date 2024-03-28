@@ -16,8 +16,9 @@ void __log(const char* msg) {
     logger("staticserver", msg);
 }
 
-void send_response(int socket, int status, char* statusdesc);
-char* readFileIntoMemory(const char* filename, size_t* length);
+char* read_file_into_mem(const char* filename, size_t* length);
+void log_request(struct sockaddr_in client, const HttpRequest *req, const HttpResponse *response);
+HttpResponse create_response(int status, char* statusdesc, char *body);
 
 void handle_conn(int socket, struct sockaddr_in client_addr) {
     size_t buffer_size = 2048;
@@ -26,23 +27,15 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
     int n = read(socket, requestraw, buffer_size - 1);
     if (n < 0) error("ERROR reading from socket");
 
-    char client[200], logmsg[2048];
-    strcpy(client, inet_ntoa(client_addr.sin_addr));
-
     HttpRequest req;
+    HttpResponse resp;
     int res = http_request_parse(requestraw, &req);
     if (res == -1) {
-        sprintf(logmsg, "%s MALFORMED", client);
-        send_response(socket, 400, "Bad Request");
+        memset(&req, 0, sizeof(HttpRequest));
+        resp = create_response(400, "Bad Request", NULL);
     } else if (strcmp(req.method, "GET") != 0) {
-        puts("zxcv");
-        puts(req.method);
-        puts("zxcv");
-        sprintf(logmsg, "%s %s %s %s", client, req.method, req.path, req.version);
-        send_response(socket, 400, "Bad Request");
+        resp = create_response(400, "Bad Request", "Method not supported");
     } else {
-        puts("here");
-        sprintf(logmsg, "%s %s %s %s", client, req.method, req.path, req.version);
         char *fname;
         char *path = req.path;
         path++; // Skip first /
@@ -53,9 +46,9 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
             fname = path;
         }
 
-        char *fcontent = readFileIntoMemory(fname, NULL);
+        char *fcontent = read_file_into_mem(fname, NULL);
         if (fcontent == NULL) {
-            send_response(socket, 404, "Not Found");
+            resp = create_response(404, "Not Found", NULL);
         } else {
             HttpResponse resp = {
                 .version = "HTTP/1.1",
@@ -66,32 +59,39 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
                 .body = fcontent,
             };
 
-            char resptext[sizeof(resp)*2];
-            resptostr(resp, resptext);
-            send(socket, resptext, strlen(resptext),0); 
+            resp = create_response(200, "OK", fcontent);
         }
     }
 
-    __log(logmsg);
+    log_request(client_addr, &req, &resp);
+    char resptext[sizeof(resp)*2];
+    resptostr(resp, resptext);
+    send(socket, resptext, strlen(resptext),0); 
     close(socket);
 }
 
-void send_response(int socket, int status, char *statusdesc) {
+void log_request(struct sockaddr_in client_addr, const HttpRequest *req, const HttpResponse *response) {
+    char client[200];
+    strcpy(client, inet_ntoa(client_addr.sin_addr));
+    char logmsg[3000];
+    sprintf(logmsg, "%s %s %s %d %s", req->version, client, req->method, response->status_code, req->path);
+    __log(logmsg);
+}
+
+
+HttpResponse create_response(int status, char *statusdesc, char *body) {
     HttpResponse resp = {
         .version = "HTTP/1.1",
         .status_code = status,
         .status_desc = statusdesc,
+        .body = body,
         .header_count = 0,
         .headers = NULL,
-        .body = NULL,
     };
-
-    char resptext[sizeof(resp)*2];
-    resptostr(resp, resptext);
-    send(socket, resptext, strlen(resptext), 0);
+    return resp;
 }
 
-char* readFileIntoMemory(const char* filename, size_t* length) {
+char* read_file_into_mem(const char* filename, size_t* length) {
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
         return NULL;

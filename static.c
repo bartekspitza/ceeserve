@@ -10,31 +10,31 @@
 #include <sys/wait.h>
 #include "http.h"
 #include "static.h"
+#include "logger.h"
 
-void handle_conn(int socket) {
+void __log(const char* msg) {
+    logger("staticserver", msg);
+}
+
+void handle_malformed(int socket, char* request);
+
+void handle_conn(int socket, struct sockaddr_in client_addr) {
     size_t buffer_size = 2048;
-    char buffer[buffer_size];
-    memset(buffer, 0, buffer_size);
-    int n = read(socket, buffer, buffer_size - 1);
-    puts(buffer);
+    char requestraw[buffer_size];
+    memset(requestraw, 0, buffer_size);
+    int n = read(socket, requestraw, buffer_size - 1);
     if (n < 0) error("ERROR reading from socket");
 
-    HttpRequest req;
-    int res = http_request_parse(buffer, &req);
-    if (res == -1) {
-        HttpResponse resp = {
-            .version = "HTTP/1.1",
-            .status_code = 400,
-            .status_desc = "Bad Request",
-            .headers = NULL,
-            .header_count = 0,
-            .body = NULL,
-        };
+    char client[200], logmsg[2048];
+    strcpy(client, inet_ntoa(client_addr.sin_addr));
 
-        char resptext[1024];
-        resptostr(resp, resptext);
-        send(socket, resptext, strlen(resptext), 0);
+    HttpRequest req;
+    int res = http_request_parse(requestraw, &req);
+    if (http_request_parse(requestraw, &req) == -1) {
+        sprintf(logmsg, "%s MALFORMED", client);
+        handle_malformed(socket, requestraw);
     } else {
+        sprintf(logmsg, "%s %s %s %s", client, req.method, req.path, req.version);
         HttpResponse resp = {
             .version = "HTTP/1.1",
             .status_code = 200,
@@ -56,7 +56,23 @@ void handle_conn(int socket) {
         send(socket, resptext, strlen(resptext), 0);
     }
 
+    __log(logmsg);
     close(socket);
+}
+
+void handle_malformed(int socket, char* request) {
+        HttpResponse resp = {
+            .version = "HTTP/1.1",
+            .status_code = 400,
+            .status_desc = "Bad Request",
+            .headers = NULL,
+            .header_count = 0,
+            .body = NULL,
+        };
+
+        char resptext[1024];
+        resptostr(resp, resptext);
+        send(socket, resptext, strlen(resptext), 0);
 }
 
 void error(const char *msg) {

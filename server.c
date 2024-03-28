@@ -59,8 +59,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         } else if (cpid == 0) { // Child
             close(listen_socket);
-            printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
-            handle_conn(serving_socket);
+            handle_conn(serving_socket, client_addr);
             close(serving_socket);
             exit(0);
         } else { // Parent

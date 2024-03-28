@@ -19,7 +19,7 @@ void resptostr(HttpResponse resp, char *str) {
         str += strlen(str);
     }
 
-    strcpy(str, "\r\n\0");
+    strcpy(str, "\r\n");
 }
 
 /*

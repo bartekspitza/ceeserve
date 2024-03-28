@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
                     .body = NULL,
                 };
 
-                char resptext[1024] = {0};
+                char resptext;
                 resptostr(resp, resptext);
                 send(serving_socket, resptext, strlen(resptext), 0);
             } else {
@@ -112,9 +112,8 @@ int main(int argc, char *argv[]) {
                 resp.header_count = 1;
                 resp.headers = ar;
 
-                char resptext[1024] = {0};
+                char resptext[1024];
                 resptostr(resp, resptext);
-                puts(resptext);
                 send(serving_socket, resptext, strlen(resptext), 0);
             }
 

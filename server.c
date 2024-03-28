@@ -23,6 +23,12 @@ void sigchld_handler(int s) {
 int main(int argc, char *argv[]) {
     printf("PID: %d\n", getpid());
 
+    // Set web root
+    char *path = argv[1];
+    if (chdir(path) == -1) {
+        error("Couldn't set web root");
+    }
+
     // Create a socket
     int listen_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_socket < 0) {

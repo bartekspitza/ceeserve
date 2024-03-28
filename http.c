@@ -20,6 +20,11 @@ void resptostr(HttpResponse resp, char *str) {
     }
 
     strcpy(str, "\r\n");
+    str += strlen(str);
+
+    if (resp.body != NULL) {
+        strcpy(str, resp.body);
+    }
 }
 
 /*

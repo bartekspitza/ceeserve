@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
                     .body = NULL,
                 };
 
-                char resptext;
+                char resptext[1024];
                 resptostr(resp, resptext);
                 send(serving_socket, resptext, strlen(resptext), 0);
             } else {
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
                     .status_desc = "OK",
                     .headers = NULL,
                     .header_count = 0,
-                    .body = NULL,
+                    .body = "Hello World!",
                 };
                 HttpHeader h1 = {
                     .key = "Host",
@@ -116,7 +116,6 @@ int main(int argc, char *argv[]) {
                 resptostr(resp, resptext);
                 send(serving_socket, resptext, strlen(resptext), 0);
             }
-
 
             close(serving_socket);
             exit(0);

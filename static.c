@@ -16,16 +16,16 @@ void __log(const char* msg) {
     logger("staticserver", msg);
 }
 
-char* read_file_into_mem(const char* filename, size_t* length);
+char* read_file_into_mem(const char* filename);
 void log_request(struct sockaddr_in client, const HttpRequest *req, const HttpResponse *response);
 HttpResponse create_response(int status, char* statusdesc, char *body);
 
 void handle_conn(int socket, struct sockaddr_in client_addr) {
     size_t buffer_size = 2048;
     char requestraw[buffer_size];
-    memset(requestraw, 0, buffer_size);
-    int n = read(socket, requestraw, buffer_size - 1);
+    int n = read(socket, requestraw, buffer_size-1);
     if (n < 0) error("ERROR reading from socket");
+    requestraw[n]  = '\0';
 
     HttpRequest req;
     HttpResponse resp;
@@ -36,48 +36,30 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
     } else if (strcmp(req.method, "GET") != 0) {
         resp = create_response(400, "Bad Request", "Method not supported");
     } else {
-        char *fname;
         char *path = req.path;
-        path++; // Skip first /
+        path++; // Skip leading '/'
 
+        char *fname;
         if (strlen(path) == 0) {
             fname = "index.html";
         } else {
             fname = path;
         }
 
-        char *fcontent = read_file_into_mem(fname, NULL);
+        char *fcontent = read_file_into_mem(fname);
         if (fcontent == NULL) {
             resp = create_response(404, "Not Found", NULL);
         } else {
-            HttpResponse resp = {
-                .version = "HTTP/1.1",
-                .status_code = 200,
-                .status_desc = "OK",
-                .headers = NULL,
-                .header_count = 0,
-                .body = fcontent,
-            };
-
             resp = create_response(200, "OK", fcontent);
         }
     }
 
     log_request(client_addr, &req, &resp);
-    char resptext[sizeof(resp)*2];
+    char resptext[5000];
     resptostr(resp, resptext);
     send(socket, resptext, strlen(resptext),0); 
     close(socket);
 }
-
-void log_request(struct sockaddr_in client_addr, const HttpRequest *req, const HttpResponse *response) {
-    char client[200];
-    strcpy(client, inet_ntoa(client_addr.sin_addr));
-    char logmsg[3000];
-    sprintf(logmsg, "%s %s %s %d %s", req->version, client, req->method, response->status_code, req->path);
-    __log(logmsg);
-}
-
 
 HttpResponse create_response(int status, char *statusdesc, char *body) {
     HttpResponse resp = {
@@ -91,7 +73,7 @@ HttpResponse create_response(int status, char *statusdesc, char *body) {
     return resp;
 }
 
-char* read_file_into_mem(const char* filename, size_t* length) {
+char* read_file_into_mem(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
         return NULL;
@@ -114,6 +96,14 @@ char* read_file_into_mem(const char* filename, size_t* length) {
     buffer[bytesRead] = '\0';
     fclose(file);
     return buffer;
+}
+
+void log_request(struct sockaddr_in client_addr, const HttpRequest *req, const HttpResponse *response) {
+    char client[200];
+    strcpy(client, inet_ntoa(client_addr.sin_addr));
+    char logmsg[3000];
+    sprintf(logmsg, "%s %s %s %d %s", req->version, client, req->method, response->status_code, req->path);
+    __log(logmsg);
 }
 
 void error(const char *msg) {

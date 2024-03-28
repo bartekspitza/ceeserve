@@ -25,19 +25,19 @@ int main(int argc, char *argv[]) {
     int reusesocket = 1;
     struct sockaddr_in listen_addr = listen_address(port);
     if (chdir(path) == -1) {
-        error("Couldn't set web root: ");
+        error("Couldn't set web root");
     }
     if ((listen_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        error("Error opening socket: ");
+        error("Error opening socket");
     }
     if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &reusesocket, sizeof(reusesocket)) == -1) {
-        error("Error setsockopt: ");
+        error("Error setsockopt");
     }
     if (bind(listen_socket, (struct sockaddr *) &listen_addr, sizeof(listen_addr)) == -1) {
-        error("Error binding: ");
+        error("Error binding");
     }
     if (listen(listen_socket, 5) == -1) {
-        error("Error listen: ");
+        error("Error listen");
     }
 
     register_zombie_killer();
@@ -60,7 +60,6 @@ int main(int argc, char *argv[]) {
         } else if (cpid == 0) { // Child
             close(listen_socket);
             handle_conn(serving_socket, client_addr);
-            close(serving_socket);
             exit(0);
         } else { // Parent
             close(serving_socket);

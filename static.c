@@ -106,7 +106,7 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
         // Read correct amount from socket
         int bytes_to_read = bufsize - bytes_read;
         int bytes = read(socket, data, bytes_to_read);
-        if (bytes < 0) exit(1);
+        if (bytes <= 0) exit(1);
         bytes_read += bytes;
         
         // See if we are done reading headers, if buffer is full here we're kinda fked

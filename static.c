@@ -38,6 +38,60 @@ int end_of_headers(char* data) {
     return -1;
 }
 
+
+void send_response(int socket, HttpResponse resp) {
+    long bytes; 
+    char *respdata = resptostr(resp, &bytes);
+    send(socket, respdata, bytes, 0); 
+}
+
+void serve_file(int socket, HttpRequest req) {
+    char *path = req.path;
+    path++; // Skip leading '/'
+
+    char *fname;
+    if (strlen(path) == 0) {
+        fname = "index.html";
+    } else {
+        fname = path;
+    }
+
+    // 404?
+    FILE* file = fopen(fname, "rb");
+    if (file == NULL) {
+        HttpResponse resp = create_response(404, "Not Found", NULL);
+        send_response(socket, resp);
+        return;
+    }
+
+    // Find size
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Content-Length
+    char* clength = malloc(sizeof(char)*30);
+    sprintf(clength, "%ld", fileSize);
+
+    // Send start of response
+    HttpResponse resp = create_response(200, "OK", NULL);
+    resp.headers = malloc(sizeof(HttpHeader)*1000);
+    resp.header_count = 0;
+    add_header(&resp, "Content-Length", clength);
+
+    if (strcmp(fname, "image.png") == 0) {
+        add_header(&resp, "Content-Type", "image/png");
+    }
+    send_response(socket, resp);
+
+    // Send body
+    while (feof(file) == 0) {
+        char buffer[bufsize];
+        size_t bytesread = fread(buffer, 1, bufsize, file);
+        send(socket, buffer, bytesread, 0);
+    }
+}
+
 /**
  * HTTP/1.1 Connection, persistent. Headers max size is 4k.
 */
@@ -51,7 +105,7 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
     while (1) {
         // Read correct amount from socket
         int bytes_to_read = bufsize - bytes_read;
-        int bytes = read(socket, data, bufsize);
+        int bytes = read(socket, data, bytes_to_read);
         if (bytes < 0) exit(1);
         bytes_read += bytes;
         
@@ -61,6 +115,7 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
             if (eof == -1) continue;
             reading_headers = false;
             if (parse_headers(data, &req) == -1) exit(1);
+            log_request(client_addr, &req, &resp);
         }
 
         // Buffer is full
@@ -68,37 +123,24 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
             // handle this
         }
 
-
-
+        // is there a body?
+        HttpHeader* cl = get_header(req, "Content-Length");
+        if (cl == NULL) {
+            if (strcmp(req.method, "GET") != 0) {
+                resp = create_response(400, "Bad Request", "Method not supported");
+                send_response(socket, resp);
+            } else {
+                serve_file(socket, req);
+            }
+        }
 
         int res = parse_headers(data, &req);
-
         if (res == -1) {
             memset(&req, 0, sizeof(HttpRequest));
             resp = create_response(400, "Bad Request", NULL);
-        } else if (strcmp(req.method, "GET") != 0) {
-            resp = create_response(400, "Bad Request", "Method not supported");
-        } else {
-            char *path = req.path;
-            path++; // Skip leading '/'
-
-            char *fname;
-            if (strlen(path) == 0) {
-                fname = "index.html";
-            } else {
-                fname = path;
-            }
-
-            create_file_response(fname, &resp);
         }
-
-        log_request(client_addr, &req, &resp);
-        long bytes; 
-        char *respdata = resptostr(resp, &bytes);
-
-        send(socket, respdata, bytes, 0); 
-        sleep(1000);
     }
+
     close(socket);
 }
 
@@ -112,48 +154,6 @@ HttpResponse create_response(int status, char *statusdesc, char *body) {
         .headers = NULL,
     };
     return resp;
-}
-
-void create_file_response(const char* filename, HttpResponse* response) {
-    response->version = "HTTP/1.1";
-    response->headers = malloc(sizeof(HttpHeader) * 100);
-    response->header_count = 0;
-
-    FILE* file = fopen(filename, "rb");
-    if (file == NULL) {
-        response->status_code = 404;
-        response->status_desc = "Not Found";
-        return;
-    }
-
-    // Find size
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // Content-Length
-    char* clength = malloc(sizeof(char)*30);
-    sprintf(clength, "%ld", fileSize);
-    add_header(response, "Content-Length", clength);
-
-    // Read the file into the buffer
-    char* fcontent = malloc(fileSize);
-    size_t bytesRead = fread(fcontent, 1, fileSize, file);
-    fclose(file);
-    if (bytesRead < fileSize) {
-        response->status_code = 500;
-        response->status_desc = "Internal Server Error";
-        return;
-    }
-
-    if (strcmp(filename, "image.png") == 0) {
-        add_header(response, "Content-Type", "image/png");
-    }
-
-    response->body_length = fileSize;
-    response->body = fcontent;
-    response->status_code = 200;
-    response->status_desc = "OK";
 }
 
 /*
@@ -177,3 +177,4 @@ void error(const char *msg) {
     perror(msg);
     exit(1);
 }
+

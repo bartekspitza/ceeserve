@@ -4,60 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-// Internal funcs
-int __parse_headers(const char* request, HttpRequest* req);
-int __request_line(const char* request, HttpRequest* req, char* cursor);
-// Internal funcs
-
-HttpHeader* get_header(HttpRequest request, char* key) {
-    for (int i = 0; i < request.header_count; i++) {
-        char* hkey = request.headers[i].key;
-        if (strcmp(hkey, key) == 0) {
-            return &request.headers[i];
-        }
-    }
-
-    return NULL;
-}
-
-char* resptostr(HttpResponse resp) {
-    char tmp[4096];
-    char *ptmp = tmp;
-
-    // Response line
-    sprintf(ptmp, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
-    ptmp += strlen(ptmp);
-
-    // Any headers
-    for (int i = 0; i < resp.header_count; i++) {
-        HttpHeader hdr = resp.headers[i];
-        sprintf(ptmp, "%s: %s\r\n", hdr.key, hdr.value);
-        ptmp += strlen(ptmp);
-    }
-    // End of headers
-    strcpy(ptmp, "\r\n");
-
-    return strdup(tmp);
-}
-
-/*
-Parses the request. Returns 0 if good, -1 if protocol failure
-*/
-int parse_headers(const char *request, HttpRequest *req) {
-    char *startpos = (char*) request;
-
-    if (__request_line(request, req, startpos) == -1) {
-        return -1;
-    }
-
-    if (__parse_headers(request, req) == -1) {
-        return -1;
-    }
-
-    return 0;
-}
-
-int __request_line(const char* request, HttpRequest* req, char* cursor) {
+int request_line(const char* request, HttpRequest* req, char* cursor) {
 
     char method[50];
     char path[2048];
@@ -74,7 +21,7 @@ int __request_line(const char* request, HttpRequest* req, char* cursor) {
     return 0;
 }
 
-int __parse_headers(const char* request, HttpRequest* req) {
+int parse_headers_only(const char* request, HttpRequest* req) {
     HttpHeader *ar = malloc(sizeof(HttpHeader) * 1000);
     memset(ar, 0, sizeof(HttpHeader) * 1000);
 
@@ -130,4 +77,52 @@ int __parse_headers(const char* request, HttpRequest* req) {
     req->headers = realloc(ar, sizeof(HttpRequest)*req->header_count);
 
     return 0;
+}
+
+/*
+Parses the request. Returns 0 if good, -1 if protocol failure
+*/
+int parse_headers(const char *request, HttpRequest *req) {
+    char *startpos = (char*) request;
+
+    if (request_line(request, req, startpos) == -1) {
+        return -1;
+    }
+
+    if (parse_headers_only(request, req) == -1) {
+        return -1;
+    }
+
+    return 0;
+}
+
+HttpHeader* get_header(HttpRequest request, char* key) {
+    for (int i = 0; i < request.header_count; i++) {
+        char* hkey = request.headers[i].key;
+        if (strcmp(hkey, key) == 0) {
+            return &request.headers[i];
+        }
+    }
+
+    return NULL;
+}
+
+char* resptostr(HttpResponse resp) {
+    char tmp[4096];
+    char *ptmp = tmp;
+
+    // Response line
+    sprintf(ptmp, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
+    ptmp += strlen(ptmp);
+
+    // Any headers
+    for (int i = 0; i < resp.header_count; i++) {
+        HttpHeader hdr = resp.headers[i];
+        sprintf(ptmp, "%s: %s\r\n", hdr.key, hdr.value);
+        ptmp += strlen(ptmp);
+    }
+    // End of headers
+    strcpy(ptmp, "\r\n");
+
+    return strdup(tmp);
 }

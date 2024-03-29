@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    close(listen_socket); // This line will never be reached in this example
+    close(listen_socket);
     return 0; 
 }
 

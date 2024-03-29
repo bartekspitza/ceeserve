@@ -56,7 +56,7 @@ void serve_file(int socket, HttpRequest req) {
         fname = path;
     }
 
-    // 404?
+    // Open file
     FILE* file = fopen(fname, "rb");
     if (file == NULL) {
         HttpResponse resp = create_response(404, "Not Found", NULL);
@@ -109,35 +109,27 @@ void handle_conn(int socket, struct sockaddr_in client_addr) {
         if (bytes < 0) exit(1);
         bytes_read += bytes;
         
-        // See if we are done reading headers
+        // See if we are done reading headers, if buffer is full here we're kinda fked
+        int body_offset;
         if (reading_headers) {
-            int eof = end_of_headers(data);
-            if (eof == -1) continue;
+            body_offset = end_of_headers(data);
+            if (body_offset == -1) continue;
             reading_headers = false;
             if (parse_headers(data, &req) == -1) exit(1);
             log_request(client_addr, &req, &resp);
         }
 
-        // Buffer is full
-        if (bytes_read == bufsize) {
-            // handle this
-        }
-
-        // is there a body?
-        HttpHeader* cl = get_header(req, "Content-Length");
-        if (cl == NULL) {
-            if (strcmp(req.method, "GET") != 0) {
-                resp = create_response(400, "Bad Request", "Method not supported");
-                send_response(socket, resp);
-            } else {
-                serve_file(socket, req);
-            }
-        }
-
-        int res = parse_headers(data, &req);
-        if (res == -1) {
-            memset(&req, 0, sizeof(HttpRequest));
-            resp = create_response(400, "Bad Request", NULL);
+        if (strcmp(req.method, "GET") == 0) { // Assume GET never has a body
+            serve_file(socket, req);
+            memset(data, 0, bufsize);
+            memset(&req, 0, bufsize);
+            memset(&resp, 0, bufsize);
+            reading_headers = true;
+            bytes_read = 0;
+        } else if (strcmp(req.method, "POST")) {
+            //TODO
+            // Allow upload of arbitrary files
+            // HttpHeader* cl = get_header(req, "Content-Length");
         }
     }
 

@@ -25,7 +25,13 @@ typedef struct {
     int header_count;
 } HttpResponse;
 
-int http_request_parse(const char *request, HttpRequest* req);
+/**
+ * Parses the data until the blank line is encountered, i.e. the request line
+ * and all the headers.
+*/
+int parse_headers(const char *data, HttpRequest* req);
+
+HttpHeader* get_header(HttpRequest request, char* key);
 
 char* resptostr(HttpResponse resp, long *bytes);
 

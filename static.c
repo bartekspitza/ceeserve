@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -22,40 +23,82 @@ void create_file_response(const char* filename, HttpResponse* response);
 HttpResponse create_response(int status, char *statusdesc, char *body);
 void add_header(HttpResponse *response, char* key, char* value);
 
-void handle_conn(int socket, struct sockaddr_in client_addr) {
-    size_t buffer_size = 2048;
-    char requestraw[buffer_size];
-    int n = read(socket, requestraw, buffer_size-1);
-    if (n < 0) error("ERROR reading from socket");
-    requestraw[n]  = '\0';
+const size_t bufsize = 4096;
 
-    HttpRequest req;
-    HttpResponse resp;
-    int res = http_request_parse(requestraw, &req);
-    if (res == -1) {
-        memset(&req, 0, sizeof(HttpRequest));
-        resp = create_response(400, "Bad Request", NULL);
-    } else if (strcmp(req.method, "GET") != 0) {
-        resp = create_response(400, "Bad Request", "Method not supported");
-    } else {
-        char *path = req.path;
-        path++; // Skip leading '/'
-
-        char *fname;
-        if (strlen(path) == 0) {
-            fname = "index.html";
-        } else {
-            fname = path;
+/**
+ * Num bytes of where last char of \r\n\r\n is encountered, -1 if not found
+*/
+int end_of_headers(char* data) {
+    for (int i = 0; i < bufsize-4; i++) {
+        if (data[i]=='\r' && data[i+1]=='\n' && data[i+2]=='\r' && data[i+3]=='\n') {
+            return i+4;
         }
-
-        create_file_response(fname, &resp);
     }
 
-    log_request(client_addr, &req, &resp);
-    long bytes; 
-    char *respdata = resptostr(resp, &bytes);
+    return -1;
+}
 
-    send(socket, respdata, bytes, 0); 
+/**
+ * HTTP/1.1 Connection, persistent. Headers max size is 4k.
+*/
+void handle_conn(int socket, struct sockaddr_in client_addr) {
+    HttpRequest req;
+    HttpResponse resp;
+    char data[bufsize];
+    int bytes_read = 0;
+    bool reading_headers = true;
+
+    while (1) {
+        // Read correct amount from socket
+        int bytes_to_read = bufsize - bytes_read;
+        int bytes = read(socket, data, bufsize);
+        if (bytes < 0) exit(1);
+        bytes_read += bytes;
+        
+        // See if we are done reading headers
+        if (reading_headers) {
+            int eof = end_of_headers(data);
+            if (eof == -1) continue;
+            reading_headers = false;
+            if (parse_headers(data, &req) == -1) exit(1);
+        }
+
+        // Buffer is full
+        if (bytes_read == bufsize) {
+            // handle this
+        }
+
+
+
+
+        int res = parse_headers(data, &req);
+
+        if (res == -1) {
+            memset(&req, 0, sizeof(HttpRequest));
+            resp = create_response(400, "Bad Request", NULL);
+        } else if (strcmp(req.method, "GET") != 0) {
+            resp = create_response(400, "Bad Request", "Method not supported");
+        } else {
+            char *path = req.path;
+            path++; // Skip leading '/'
+
+            char *fname;
+            if (strlen(path) == 0) {
+                fname = "index.html";
+            } else {
+                fname = path;
+            }
+
+            create_file_response(fname, &resp);
+        }
+
+        log_request(client_addr, &req, &resp);
+        long bytes; 
+        char *respdata = resptostr(resp, &bytes);
+
+        send(socket, respdata, bytes, 0); 
+        sleep(1000);
+    }
     close(socket);
 }
 

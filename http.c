@@ -9,6 +9,17 @@ int __parse_headers(const char* request, HttpRequest* req);
 int __request_line(const char* request, HttpRequest* req, char* cursor);
 // Internal funcs
 
+HttpHeader* get_header(HttpRequest request, char* key) {
+    for (int i = 0; i < request.header_count; i++) {
+        char* hkey = request.headers[i].key;
+        if (strcmp(hkey, key) == 0) {
+            return &request.headers[i];
+        }
+    }
+
+    return NULL;
+}
+
 char* resptostr(HttpResponse resp, long *bytes) {
     char tmp[256];
     char *ptmp = tmp;
@@ -43,7 +54,7 @@ char* resptostr(HttpResponse resp, long *bytes) {
 /*
 Parses the request. Returns 0 if good, -1 if protocol failure
 */
-int http_request_parse(const char *request, HttpRequest *req) {
+int parse_headers(const char *request, HttpRequest *req) {
     char *startpos = (char*) request;
 
     if (__request_line(request, req, startpos) == -1) {

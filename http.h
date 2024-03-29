@@ -33,6 +33,6 @@ int parse_headers(const char *data, HttpRequest* req);
 
 HttpHeader* get_header(HttpRequest request, char* key);
 
-char* resptostr(HttpResponse resp, long *bytes);
+char* resptostr(HttpResponse resp);
 
 #endif

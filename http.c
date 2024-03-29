@@ -20,35 +20,24 @@ HttpHeader* get_header(HttpRequest request, char* key) {
     return NULL;
 }
 
-char* resptostr(HttpResponse resp, long *bytes) {
-    char tmp[256];
+char* resptostr(HttpResponse resp) {
+    char tmp[4096];
     char *ptmp = tmp;
 
+    // Response line
     sprintf(ptmp, "%s %d %s\r\n", resp.version, resp.status_code, resp.status_desc);
     ptmp += strlen(ptmp);
 
+    // Any headers
     for (int i = 0; i < resp.header_count; i++) {
         HttpHeader hdr = resp.headers[i];
         sprintf(ptmp, "%s: %s\r\n", hdr.key, hdr.value);
         ptmp += strlen(ptmp);
     }
-
+    // End of headers
     strcpy(ptmp, "\r\n");
-    ptmp += strlen(ptmp);
-    long datalength = strlen(tmp) + resp.body_length;
 
-    if (bytes != NULL) {
-        *bytes = datalength;
-    }
-
-    char *respdata = malloc(datalength);
-    memcpy(respdata, tmp, strlen(tmp));
-
-    if (resp.body != NULL && resp.body_length > 0) {
-        memcpy((respdata+strlen(tmp)), resp.body, resp.body_length);
-    }
-
-    return respdata;
+    return strdup(tmp);
 }
 
 /*

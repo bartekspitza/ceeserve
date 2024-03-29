@@ -118,7 +118,7 @@ void test_http_response_tostr_response_line() {
         .body = NULL,
     };
 
-    char *resptext = resptostr(resp, NULL);
+    char *resptext = resptostr(resp);
 
     char correct[] = "HTTP/1.1 400 Bad Request\r\n\r\n\0";
     TEST_ASSERT_EQUAL_CHAR_ARRAY(correct, resptext, strlen(correct));
@@ -139,34 +139,11 @@ void test_http_response_tostr_headers() {
         .body = NULL,
     };
 
-    char *resptext = resptostr(resp, NULL);
+    char *resptext = resptostr(resp);
 
     char correct[] = "HTTP/1.1 400 Bad Request\r\nserver: ceeserve\r\n\r\n";
     TEST_ASSERT_EQUAL_CHAR_ARRAY(correct, resptext, strlen(correct));
 }
-
-void test_http_response_tostr_body() {
-    HttpHeader h1 = {
-        .key = "server",
-        .value = "ceeserve",
-    };
-    HttpHeader headers[] = {h1};
-    HttpResponse resp = {
-        .version = "HTTP/1.1",
-        .status_code = 200,
-        .status_desc = "OK",
-        .headers = headers,
-        .header_count = 1,
-        .body = "Hello World",
-        .body_length = strlen("Hello World")
-    };
-
-    char *resptext = resptostr(resp, NULL);
-
-    char correct[] = "HTTP/1.1 200 OK\r\nserver: ceeserve\r\n\r\nHello World";
-    TEST_ASSERT_EQUAL_CHAR_ARRAY(correct, resptext, strlen(correct));
-}
-
 
 int main(int argc, char *argv[]) {
     UNITY_BEGIN();
@@ -182,7 +159,6 @@ int main(int argc, char *argv[]) {
 
     RUN_TEST(test_http_response_tostr_response_line);
     RUN_TEST(test_http_response_tostr_headers);
-    RUN_TEST(test_http_response_tostr_body);
 
     UNITY_END();
     return 0;
